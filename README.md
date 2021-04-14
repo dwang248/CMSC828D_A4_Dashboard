@@ -1,6 +1,7 @@
 # CMSC828D A4: Evaluating Dashboard Performance
 
 Name: David Wang
+
 Email: dwang248@umd.edu
 
 ### Introduction  
