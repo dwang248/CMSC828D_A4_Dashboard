@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+
+<head>
+<title>CMSC828D -- A4</title>
+
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script src="https://unpkg.com/d3-simple-slider"></script>
+<script src="https://unpkg.com/topojson@3"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+
+<link
+  rel="stylesheet"
+  href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+  integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+  crossorigin="anonymous"
+/>
+</head>
+
+<style>
+  path {
+    stroke: grey;
+    stroke-width: 0.25px;
+  }
+
+  #states .active {
+    display:none;
+    fill: grey;
+  }
+
+  .state:hover {
+    fill: blue;
+  }
+
+  .background {
+    fill: none;
+    pointer-events: all;
+  }
+
+  .axis {
+	  font: 10px sans-serif;
+  }
+
+  .axis path, .axis line {
+    fill: none;
+    stroke: white;
+    stroke-width: 2px;
+    shape-rendering: crispEdges;
+  }
+
+  .line {
+    fill: none;
+    stroke: blue;
+    stroke-width: 5px;
+  }
+
+  .overlay {
+    fill: none;
+    pointer-events: all;
+  }
+
+  .focus circle {
+    fill: white;
+    stroke: red;
+    stroke-width: 5px;
+  }
+    
+  .hover-line {
+    stroke: blue;
+    stroke-width: 2px;
+    stroke-dasharray: 3,3;
+  }
+
+  #slider-container {
+      position: relative;
+      height:30px;
+      background-color: white;
+  }
+
+  #buttons {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+</style>
+
+<body>
+  
+<div class="container">
+  <h1>CMSC828D -- A4: Housing and Urban Development (HUD) Insured Multifamily Mortgages 1970-2014</h1>
+  <div class="row align-items-center">
+    <div class="row align-items-center">
+      <div class="col-sm-2"><span>Years:</span><p id="value-range"></p></div>
+      <div class="col-sm"><div id="slider-range"></div></div>
+    </div>
+
+    <div id="bar" class="row align-items-center"></div>
+
+    <div id="buttons">
+      <a id="interest_rate"><button type="button" onclick='updateVis("interest_rate", "Interest Rate")'>Interest Rate</button></a>
+      <a id="original_mortgage_amount"><button type="button" onclick='updateVis("original_mortgage_amount", "Original Mortgage Amount")'>Original Mortgage Amount</button></a>
+      <a id="current_principal_and_interest"><button type="button" onclick='updateVis("current_principal_and_interest", "Current Principal and Interest")'>Current Principal and Interest</button></a>
+      <a id="amortized_principal_balance"><button type="button" onclick='updateVis("amortized_principal_balance", "Amortized Principal Balance")'>Amortized Principal Balance</button></a>
+    </div>
+  </div>
+  <div id="line"></div>
+  <div style="width: 100%;">
+    <div id="map" class="row align-items-center"></div>
+    <div id="legend" class="row align-items-center"></div>
+  </div>
+
+</div>
+
+<script>
+  const margin = {top: 10, right: 10, bottom: 20, left: 10};
+  var width = parseInt(d3.select('#map').style('width'));
+  width = (width - margin.left - margin.right);
+  var mapRatio = 0.5;
+  var height = width * mapRatio;
+  var centered = null;
+
+  var parseTime = d3.timeParse("%Y");
+
+  var projection = d3.geoAlbersUsa()
+      .scale(width)
+      .translate([width/2, height/2]); 
+      
+  var path = d3.geoPath().projection(projection);
+
+  var startDate = Date.now();
+  // Heading
+  console.log(", action, visualization, time, datetime, value");
+
+  // removes the content inside of the given DOM element 
+  function clearNode(identifier) {
+    const myNode = document.getElementById(identifier);
+    myNode.textContent = '';
+  }
+
+  function getYearRange() {
+    let url = new URL("http://localhost:8000/get-year-range/");
+    let yearRange = fetch(url, {credentials: "same-origin", headers: {'Content-Type': 'application/json'}, method: 'GET'})
+      .then(response => response.json())
+      .then(fetchedData => {
+        data = fetchedData;
+        startYear = data.yearRange[0];
+        endYear = data.yearRange[1];
+        createSlider(startYear, endYear)
+      });
+  }
+
+  // Creates the year slider
+  function createSlider(startYear, endYear) {
+    clearNode("slider-range");
+    clearNode("value-range");
+
+    // gets the column and column title (without '_') from the page
+    let column = "interest_rate";
+    if (document.getElementsByClassName('center-container center-items us-state')[0]) {
+      column = document.getElementsByClassName('center-container center-items us-state')[0].id
+    }
+    let columnTitle = document.getElementById(column).textContent; 
+
+    let sliderRange = d3.sliderBottom()
+      .min(startYear)
+      .max(endYear)
+      .width(400)
+      .ticks(5)
+      .default([startYear, endYear])
+      .fill("#2196f3")
+      .tickFormat(d3.format("d"))
+      .on("onchange", valRange => {
+        // When updating the year slider
+
+        // Update the text on the year
+        let yearText = parseInt(valRange[0]) + '-' + parseInt(valRange[1]);
+        d3.select("p#value-range").text(yearText);
+
+        valRangeFormat = [parseInt(valRange[0]), parseInt(valRange[1])];
+
+        console.log(", slider, all, " + (Date.now() - startDate)/100 + ", " + new Date(Date.now()).toISOString() + ", " + yearText)
+
+        // Creates the bar chart that shows the bin counts per year
+        createVis(valRangeFormat, yearText, column, columnTitle);
+        // createMap(column, columnTitle);
+      });
+      
+    let gRange = d3
+    .select("div#slider-range")
+    .append("svg")
+    .attr("width", 500)
+    .attr("height", 100)
+    .append("g")
+    .attr("transform", "translate(30,30)");
+
+    gRange.call(sliderRange);
+
+    d3.select("p#value-range").text(
+      sliderRange
+        .value()
+        .join("-")
+    );
+    
+    let yearRange = [startYear, endYear]
+    let yearText = startYear + '-' + endYear;
+    createVis(yearRange, yearText, column, columnTitle);
+  }
+
+  // Creates the bar chart that shows the bin counts per year
+  // Update to create all three viz
+  function createVis(yearsRange, yearText, column, columnTitle) {
+    let data = {"yearsRange": yearsRange, "column": column}
+    let url = new URL("http://localhost:8000/visualizations/");
+    fetch(url, {credentials: "same-origin", headers: {'Content-Type': 'application/json'}, method: 'POST', body: JSON.stringify(data)})
+      .then(response => response.json())
+      .then(fetchedData => {
+        let data = fetchedData;
+
+        // Data for creation of bar chart
+        let binCountYears = data.binCountYears;
+        let maxBinCount = data.maxBinCount;
+        let minBinCount = data.minBinCount;
+
+        // Data for creation of map
+        let averagesPerState = data.averagesPerState;
+        let averagesPerStateAbbrev = data.averagesPerStateAbbrev;
+        let rangesPerState = data.rangesPerState;
+        let rangesPerStateLabels = data.rangesPerStateLabels;
+        let colorScale = d3.scaleThreshold()
+          .domain(rangesPerState)
+          .range(d3.schemeOrRd[7]);
+
+        // Data for creation of line chart
+        nationalAverageByYear = data.nationalAverageByYearFormatted;
+        minNationalByYear = data.minNationalByYear;
+        maxNationalByYear = data.maxNationalByYear;
+        avgNational = data.avgNational;
+        
+        renderBar(binCountYears, maxBinCount, minBinCount);
+
+        renderMap(averagesPerState, averagesPerStateAbbrev, colorScale, 
+        rangesPerState, rangesPerStateLabels, column, columnTitle, yearText);
+
+        renderLine(nationalAverageByYear, minNationalByYear, maxNationalByYear,
+        avgNational, columnTitle, yearText);
+      });
+  }
+
+  function updateVis(column, columnTitle) {
+
+    console.log(", button, line/map, " + (Date.now() - startDate)/100 + ", " + new Date(Date.now()).toISOString() + ", " + columnTitle);
+
+    let years = document.getElementById('value-range').textContent
+    let data = {"column": column, "years": years};
+    let url = new URL("http://localhost:8000/update-attribute/");
+    fetch(url, {credentials: "same-origin", headers: {'Content-Type': 'application/json'}, method: 'POST', body: JSON.stringify(data)})
+      .then(response => response.json())
+      .then(fetchedData => {
+        let data = fetchedData;
+        
+        // Data for creation of map
+        let averagesPerState = data.averagesPerState;
+        let averagesPerStateAbbrev = data.averagesPerStateAbbrev;
+        let rangesPerState = data.rangesPerState;
+        let rangesPerStateLabels = data.rangesPerStateLabels;
+        let colorScale = d3.scaleThreshold()
+          .domain(rangesPerState)
+          .range(d3.schemeOrRd[7]);
+
+        // Data for creation of line chart
+        nationalAverageByYear = data.nationalAverageByYearFormatted;
+        minNationalByYear = data.minNationalByYear;
+        maxNationalByYear = data.maxNationalByYear;
+        avgNational = data.avgNational;
+        
+
+        
+        renderMap(averagesPerState, averagesPerStateAbbrev, colorScale, 
+        rangesPerState, rangesPerStateLabels, column, columnTitle, years);
+
+        renderLine(nationalAverageByYear, minNationalByYear, maxNationalByYear,
+        avgNational, columnTitle, years);
+    });
+  }
+
+  function renderBar(years, max, min) {
+    clearNode("bar");
+
+    let svg = d3.select("#bar")
+      .append("svg")
+      .attr('class', 'center-container')
+      .attr('height', height/1.15 + margin.top + margin.bottom)
+      .attr('width', width + margin.left + margin.right);
+    
+    svg.append("text")
+      .attr("x", (width / 2))             
+      .attr("y", 20)
+      .attr("text-anchor", "middle")  
+      .style("font-size", "24px")
+      .style("font-weight", "bold")  
+      .text("Number of HUD Insured Multifamily Mortgages Per Year in the US");
+
+    years.forEach(function(d) {
+      d.year = parseTime(d.year);
+    });
+
+    let x = d3.scaleTime()
+      .range([0, width/1.25])
+      .domain([years[0].year, years[years.length-1].year]);
+
+    let y = d3.scaleLinear()
+      .range([height/1.25, 0])
+      .domain([min, max]).nice();
+
+    let g = svg.append("g")
+      .attr("transform", "translate(" + (5 * margin.left) + "," + 3 * margin.top + ")");
+
+    g.append("g")
+        .attr("class", "axis axis--x")
+        .attr("transform", "translate(0," + height/1.25 + ")")
+        .call(d3.axisBottom(x));
+
+    g.append("g")
+        .attr("class", "axis axis--y")
+        .call(d3.axisLeft(y).ticks(10))
+        .append("text")
+        .attr("class", "axis-title")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .attr("fill", "grey")
+        .text("Mortgages");
+    
+    g.append("g")
+    .selectAll("rect")
+    .data(years)
+    .join("rect")
+    .attr("x", function(d) { return x(d.year); })
+    .attr("y", function(d) { return y(d.count); })
+    .attr("width", width/(1.25 * years.length))
+    .attr("height", function(d) { return height /1.25 - y(d.count); })
+    .attr("fill", "#69b3a2")
+    .style("stroke", "grey");
+
+    let focus = g.append("g")
+        .attr("class", "focus")
+        .style("display", "none");
+
+    focus.append("circle")
+        .attr("r", 7.5);
+
+    focus.append("rect")
+      .attr("class", "hover")
+      .style("fill", "white")
+      .style("stroke", "grey")
+      .attr("width", 100)
+      .attr("height", 25)
+      .attr("x", 10)
+      .attr("y", -22)
+      .attr("rx", 4)
+      .attr("ry", 4)
+
+    focus.append("text")
+      .attr("x", 12)
+      .attr("y", -8)
+      .attr("dy", ".31em");
+
+    svg.append("rect")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+        .attr("class", "overlay")
+        .attr("width", width/1.15)
+        .attr("height", height/1.15)
+        .on("mouseover", function() { focus.style("display", null); })
+        .on("mouseout", function() { focus.style("display", "none"); })
+        .on("mousemove", mousemove);
+
+
+    function mousemove(d) {
+      let bisectDate = d3.bisector(function(d) { return d.year; }).left;
+      let datePos = x.invert(d3.pointer(d)[0]);
+
+      let i = bisectDate(years, datePos);
+      let point = years[i];
+      if (i > 0) {
+        point = years[i-1];
+      }
+
+      focus.attr("transform", "translate(" + (x(point.year) + 10) + "," + y(point.count) + ")");
+      focus.select("text").text(point.year.getFullYear() + ": " + point.count);
+
+      console.log(", hover, bar," + (Date.now() - startDate)/100 + ", " + new Date(Date.now()).toISOString() + ", " + point.year.getFullYear() + ": " + point.count);
+    }
+  }
+  
+  function renderMap(states, statesAbbrevNum, colorScale, ranges, rangeLabels, column, columnTitle, years) {
+    clearNode("map");
+    
+    let svg = d3.select("#map")
+      .append("svg")
+      .attr('class', 'center-container')
+      .attr('height', height + margin.top + margin.bottom)
+      .attr('width', width + margin.left + margin.right);
+
+    let tooltip = d3.select("#map")
+      .append("div")
+      .attr("class", "tooltip")
+      .style("opacity", 0)
+      .style("background-color", "black")
+      .style("color", "white")
+      .style("text-align", "center")
+      .style("padding", "5px 0")
+      .style("border-radius", "6px")
+      .style("display", "none");
+
+    svg.append('rect')
+      .attr('class', 'background center-container')
+      .attr('height', height + margin.top + margin.bottom)
+      .attr('width', width + margin.left + margin.right)
+      .on('click', d => zoom(d,g));
+
+    svg.append("text")
+      .attr("x", (width / 2))             
+      .attr("y", 20)
+      .attr("text-anchor", "middle")  
+      .style("font-size", "24px")
+      .style("font-weight", "bold")  
+      .text("Average HUD Insured Multifamily " + columnTitle + " Per State Between " + years);
+
+    let g = svg.append("g")
+      .attr('id', column)
+      .attr('class', 'center-container center-items us-state')
+      .attr('transform', 'translate('+margin.left+','+margin.top+')')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+
+    d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(function(topology) {
+
+      let statePaths = topojson.feature(topology, topology.objects.states).features;
+
+      g.selectAll("path")
+        .data(statePaths)
+        .enter().append("path")
+        .attr("d", path)
+        .attr("class", "state")
+        .attr("id", function (d) {
+          return d.properties["name"];
+        })
+        .attr("fill", function (d) {
+          return colorScale(states[d.properties["name"]]);
+        })
+        .on("click", d => zoom(d,g))
+        .on("mouseover", function(d) {
+          if (states[d.target["id"]]) {
+            tooltip.transition()
+            .duration(10)
+            .style("opacity", 1)
+            .style("display", null);
+
+            console.log(", hover, map, " + (Date.now() - startDate)/100 + ", " + new Date(Date.now()).toISOString() + ", " + d.target["id"] + ": " + statesAbbrevNum[d.target["id"]])
+
+            if (column == "interest_rate") {
+              tooltip.text(d.target["id"] + ": " + statesAbbrevNum[d.target["id"]] + "%")
+                .style("left", (d.pageX + 20) + "px")     
+                .style("top", (d.pageY - 50) + "px")
+                .style("display", null);  
+
+            }
+            else {
+              tooltip.text(d.target["id"] + ": $" + statesAbbrevNum[d.target["id"]])
+                .style("left", (d.pageX + 20) + "px")     
+                .style("top", (d.pageY - 50) + "px")
+                .style("display", null);  
+            }
+          }
+        })
+        .on("mouseout", function(d) {       
+          tooltip.transition()        
+            .duration(500)      
+            .style("opacity", 0)
+            .style("display", "none"); 
+        });
+    });
+    createLegend(colorScale, rangeLabels, columnTitle);
+  }
+
+  function createLegend(colorScale, rangeLabels, columnTitle) {
+    let legend = d3.legendColor()
+      .title(function() {
+          if (columnTitle == "Interest Rate") {
+            return columnTitle + " (%)";
+          }
+          else if (columnTitle == "Current Principal and Interest") {
+            return columnTitle + " (Thousands)"
+          }
+          else {
+            return columnTitle + " (Millions)"
+          }
+        }
+      )
+      .labels(rangeLabels)
+      .scale(colorScale);
+
+    let svg = d3.select("#map")
+    .append("svg")
+    .attr('class', 'center-container')
+    .attr('height', height/2.5 + margin.top + margin.bottom)
+    .attr('width', width/3 + margin.left + margin.right)
+
+    let g = svg.append("g")
+      .attr('class', 'center-container center-items us-state')
+      .attr('transform', 'translate('+margin.right+','+ 2 * margin.top+')')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+      .call(legend);
+  }
+
+  function zoom(d, g) {
+    let x, y, scale;
+    let state = d.target.__data__;
+
+    if (d && centered !== state) {
+      let centroid = path.centroid(state);
+      x = centroid[0];
+      y = centroid[1];
+      scale = 4;
+      centered = state;
+
+      console.log(", zoomin, map, " + (Date.now() - startDate)/100 + ", " + new Date(Date.now()).toISOString() + ", " + state)
+    } 
+    else {
+      x = width / 2;
+      y = height / 2;
+      scale = 1;
+      centered = null;
+      console.log(", zoomout, map, " + (Date.now() - startDate)/100 + ", " + new Date(Date.now()).toISOString() + ", " + state)
+    }
+
+    g.selectAll("path")
+        .classed("active", centered && function(d) { return d === centered; });
+
+    g.transition()
+        .duration(750)
+        .attr("transform", "translate(" + width / 2 + "," + height / 2 + ") scale(" + scale + ") translate(" + -x + "," + -y + ")")
+        .style("stroke-width", 1.5 / scale + "px");
+
+        
+  }
+
+  function renderLine(nation, min, max, avg, columnTitle, yearsRange) {
+    clearNode("line");
+
+    let svg = d3.select("#line")
+      .append("svg")
+      .attr('class', 'center-container')
+      .attr('height', height + margin.top + margin.bottom)
+      .attr('width', width + margin.left + margin.right);
+    
+    svg.append("text")
+      .attr("x", (width / 2))             
+      .attr("y", 20)
+      .attr("text-anchor", "middle")  
+      .style("font-size", "24px")
+      .style("font-weight", "bold")  
+      .text("National Average " + columnTitle + " Per Year Between " + yearsRange);
+
+    nation.forEach(function(d) {
+      d.year = parseTime(d.year);
+    });
+
+    let x = d3.scaleTime()
+      .range([0, width/1.25])
+      .domain([nation[0].year, nation[nation.length-1].year]);
+
+    let y = d3.scaleLinear()
+      .range([height/1.25, 0])
+      .domain([min, max]).nice();
+
+
+    let line = d3.line()
+      .x(function(d) { return x(d.year); })
+      .y(function(d) { return y(d.average); });
+
+    let g = svg.append("g")
+      .attr("transform", "translate(" + (7 * margin.left) + "," + 3 * margin.top + ")");
+
+    g.append("g")
+        .attr("class", "axis axis--x")
+        .attr("transform", "translate(0," + height/1.25 + ")")
+        .call(d3.axisBottom(x));
+
+    g.append("g")
+        .attr("class", "axis axis--y")
+        .call(d3.axisLeft(y).ticks(10))
+        .append("text")
+        .attr("class", "axis-title")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .attr("fill", "grey")
+        .text(columnTitle);
+
+    g.append("path")
+        .datum(nation)
+        .attr("class", "line")
+        .attr("d", line);
+
+    let focus = g.append("g")
+        .attr("class", "focus")
+        .style("display", "none");
+
+    focus.append("circle")
+        .attr("r", 7.5);
+
+    focus.append("rect")
+      .attr("class", "hover")
+      .style("fill", "white")
+      .style("stroke", "grey")
+      .attr("width", 120)
+      .attr("height", 25)
+      .attr("x", 10)
+      .attr("y", -22)
+      .attr("rx", 4)
+      .attr("ry", 4)
+
+    focus.append("text")
+      .attr("x", 12)
+      .attr("y", -8)
+      .attr("dy", ".31em");
+
+    svg.append("rect")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+        .attr("class", "overlay")
+        .attr("width", width/1.15)
+        .attr("height", height/1.15)
+        .on("mouseover", function() { focus.style("display", null); })
+        .on("mouseout", function() { focus.style("display", "none"); })
+        .on("mousemove", mousemove);
+
+
+    function mousemove(d) {
+      let bisectDate = d3.bisector(function(d) { return d.year; }).left;
+      let datePos = x.invert(d3.pointer(d)[0]);
+
+      let i = bisectDate(nation, datePos);
+      let point = nation[i];
+      if (i > 0) {
+        point = nation[i-1];
+      }
+
+      focus.attr("transform", "translate(" + (x(point.year)) + "," + y(point.average) + ")");
+      focus.select("text").text(function () {
+        if (columnTitle == "Interest Rate") {
+          return point.year.getFullYear() + ": " + point.averageAbbrev + "%";
+        }
+        return point.year.getFullYear() + ": $" + point.averageAbbrev;
+      });
+
+      console.log(", hover, line, " + (Date.now() - startDate)/100 + ", " + new Date(Date.now()).toISOString() + ", " + point.year.getFullYear() + ": " + point.averageAbbrev)
+    }
+
+  }
+  getYearRange();
+
+</script>
+</body>
