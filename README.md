@@ -15,19 +15,17 @@ CREATE USER cmsc828d;
 CREATE DATABASE a3database;
 ```
 
-Also, ensure that the following is true:
-```
-Host: localhost
-Port: 5432
-```
-
 ### POSTGRESQL
 We assume that the user `cmsc828d` has ___superuser___ privilege. If not, please run the following command into your PostgreSQL server as admin:
 ```
 ALTER USER cmsc828d WITH SUPERUSER;
 ```
 
-
+Also, ensure that the following is true on your PostgreSQL:
+```
+Host: localhost
+Port: 5432
+```
 
 ### Python Packages
 Ensure that the following python packages are installed:
