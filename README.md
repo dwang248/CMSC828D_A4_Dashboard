@@ -9,13 +9,25 @@ Email: dwang248@umd.edu
 The dataset used was from the Housing and Urban Development (HUD) department contaiining data related to mortgages for multifamily insured properties from 1970 to 2014.    
 
 ### Prerequisite  
-Make sure you have pip3, python3, and psql installed. Additionally, we have assumed that you have created the user `cmsc828d` and have the database `a3database`.
+Make sure you have pip3, python3, and psql installed. Additionally, we have assumed that you have created the user `cmsc828d` and have the database `a3database`. If you do not please run the following commands into your PostgreSQL server as admin:
+```
+CREATE USER cmsc828d;
+CREATE DATABASE a3database;
+```
+
+Also, ensure that the following is true:
+```
+Host: localhost
+Port: 5432
+```
 
 ### POSTGRESQL
 We assume that the user `cmsc828d` has ___superuser___ privilege. If not, please run the following command into your PostgreSQL server as admin:
 ```
 ALTER USER cmsc828d WITH SUPERUSER;
 ```
+
+
 
 ### Python Packages
 Ensure that the following python packages are installed:
