@@ -40,6 +40,6 @@ python3 server.py
 Now, open the web page http://127.0.0.1:8000/ with any browser to run the dashboard.
   
 ### Evaluation Survey
-Please fill out the following form to complete tasks and provide feedback: [Link]https://umdsurvey.umd.edu/jfe/form/SV_3Obd5mXvoqIuSFM)
+Please fill out the following form to complete tasks and provide feedback: [Link](https://umdsurvey.umd.edu/jfe/form/SV_3Obd5mXvoqIuSFM)
 
 You will be asked to upload a user log at the end of the survey. To do so will require you to right click within the console window and selecting "save as" in the menu ([instructions here](https://support.shortpoint.com/support/solutions/articles/1000222881-save-google-chrome-browser-s-console-file))
