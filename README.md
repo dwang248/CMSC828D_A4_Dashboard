@@ -8,26 +8,24 @@ Email: dwang248@umd.edu
 The original dataset is comprised of fatal police shootings in U.S. that occurred between January 2015 and June 2020. You will be interacting with a generated dataset of 10,000 tuples that uses the same attributes and distribution based on the original dataset. The data contains basic information about the people who were killed and factors relating the shooting event. For my dashboard, I decided to specifically focus on a person's race, gender, and age group, as well as the date it took place, where it occurred, signs of mental illness, if the suspect was fleeing, and if there was a body camera present to record the incident.    
 
 ### Pre-requisite  
-1. Make sure you have pip3, python3, and psql installed. _The setup script will create the proper user (```cmsc828d```), database (```a3database```), and corresponding schemas and tables for you._  
+Make sure you have pip3, python3, and psql installed. Additionally, we have assumed that you have created the user `cmsc828d` and have the database `a3database`.
 
-### Set-up Instructions 
-1. Navigate to the project directory folder: ```cmsc828d_a4_dchou/```
-2. Run the ```setup.sh``` script: 
-```bash
-./setup.sh
+### POSTGRESQL
+We assume that the user `cmsc828d` has ___superuser___ privilege. If not, please run the following command into your PostgreSQL server as admin:
 ```
+ALTER USER cmsc828d WITH SUPERUSER;
+```
+
+### Python Packages
+Ensure that the following python packages are installed:
+csv, random, datetime, simplejson, json, flask, and psycopg2
 
 ### Launching the Interface
-Run the following to start the experiment:
-```bash
-python3 ./server.py
+Run the following to start up the dashboard:
 ```
-If you see the following, then you have successfully connected to the database:
-```bash 
-Connecting to database
-	->host='localhost' dbname='a3database' user='cmsc828d'
-Connected!
+python3 server.py
 ```
+
 Now, open the web page http://127.0.0.1:8000/ with any browser to run the dashboard.
 
 ### Notes

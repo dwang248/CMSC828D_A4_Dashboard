@@ -15,7 +15,7 @@ endYear = 0
 
 # Connects to the server
 def getConnection():
-  conn = psycopg2.connect(host="localhost", port = 5432, database="a2database", user="cmsc828d", password="password")
+  conn = psycopg2.connect(host="localhost", port = 5432, database="a3database", user="cmsc828d")
   cur = conn.cursor()
   return (cur,conn)
 
