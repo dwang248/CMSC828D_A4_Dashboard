@@ -16,9 +16,14 @@ CREATE DATABASE a3database;
 ```
 
 ### POSTGRESQL
-We assume that the user `cmsc828d` has ___superuser___ privilege. If not, please run the following command into your PostgreSQL server as admin:
+I assume that the user `cmsc828d` has ___superuser___ privilege. If not, please run the following command into your PostgreSQL server as admin:
 ```
 ALTER USER cmsc828d WITH SUPERUSER;
+```
+
+I also assumed that the user `cmsc828d` has the password `password`. If not, please run the following command into your PostgreSQL server as admin:
+```
+ALTER USER cmsc828d WITH PASSWORD 'password';
 ```
 
 Also, ensure that the following is true on your PostgreSQL:
