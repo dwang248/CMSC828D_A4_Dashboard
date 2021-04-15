@@ -42,7 +42,7 @@ Run the following to start up the dashboard:
 python3 server.py
 ```
 
-Now, open the web page http://127.0.0.1:8000/ with any browser to run the dashboard.
+Now, open the web page http://localhost:8000/ with any browser to run the dashboard.
   
 ### Evaluation Survey
 Please fill out the following form to complete tasks and provide feedback: [Link](https://umdsurvey.umd.edu/jfe/form/SV_3Obd5mXvoqIuSFM)
