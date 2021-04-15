@@ -15,7 +15,7 @@ endYear = 0
 
 # Connects to the server
 def getConnection():
-  conn = psycopg2.connect(host="localhost", port = 5432, database="a3database", user="cmsc828d")
+  conn = psycopg2.connect(host="localhost", port = 5432, database="a3database", user="cmsc828d", password="password")
   cur = conn.cursor()
   return (cur,conn)
 
@@ -112,7 +112,7 @@ def formatTable(table):
   
   return tableUpdate, tableUpdateAbbrev
 
-conn = psycopg2.connect(host="localhost", port = 5432, database="a2database", user="cmsc828d", password="password")
+conn = psycopg2.connect(host="localhost", port = 5432, database="a3database", user="cmsc828d", password="password")
 cur = conn.cursor()
 cur.execute("DROP MATERIALIZED VIEW IF EXISTS avg_attributes")
 cur.execute("DROP TABLE IF EXISTS hud")
@@ -148,7 +148,7 @@ app = Flask(__name__)
 @app.route('/')
 def renderPage():
 
-  conn = psycopg2.connect(host="localhost", port = 5432, database="a2database", user="cmsc828d", password="password")
+  conn = psycopg2.connect(host="localhost", port = 5432, database="a3database", user="cmsc828d", password="password")
   cur = conn.cursor()
 
   cur.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS avg_attributes AS SELECT AVG(interest_rate) avg_interest_rate, AVG(original_mortgage_amount) avg_original_mortgage_amount, \
@@ -288,4 +288,4 @@ def getYearRange():
   return resp
 
 if __name__ == "__main__":
-  app.run(debug=False,port=8000)
+  app.run(debug=True,port=8000)
