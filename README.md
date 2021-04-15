@@ -6,7 +6,7 @@ Email: dwang248@umd.edu
 
 ### Introduction  
 #### _Insured Multifamily Mortgages (1970-2014)_  
-The dataset used was from the Housing and Urban Development (HUD) department contaiining data related to mortgages for multifamily insured properties from 1970 to 2014.    
+The dataset used was from the Housing and Urban Development (HUD) department containing data related to mortgages for multifamily insured properties from 1970 to 2014.    
 
 ### Prerequisite  
 Make sure you have pip3, python3, and psql installed. Additionally, we have assumed that you have created the user `cmsc828d` and have the database `a3database`. If you do not please run the following commands into your PostgreSQL server as admin:
